@@ -8,3 +8,7 @@ headers:
   - ContentType:application/json
   - Accept:text/html
 url: http://domain.com
+# protocol: http1 | http2 | h2c
+protocol: http1
+# skip TLS verify for lab/self-signed targets (http2)
+insecure: false

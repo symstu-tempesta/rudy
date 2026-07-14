@@ -51,6 +51,31 @@ There are some options to change the rudy default behaviour
 | Tor                 | Use TOR proxy to send the requests.                                      | `--tor`          | `-t`       | `socks5://tor_endpoint`          |               |
 | Header              | Pass additional headers to the request, you can pass multiple headers.   | `--header`       | `-h`       | `Content-Type: application/json` |               |
 | Method              | Set the request HTTP method.                                             | `--method`       | `-m`       | `PATCH`                          |               |
+| Protocol            | HTTP version: `http1` (chunked), `http2` (TLS), `h2c` (cleartext).       | `--protocol`     |            | `http2`                          | `http1`       |
+| Insecure            | Skip TLS certificate verification (lab / self-signed).                   | `--insecure`     | `-k`       |                                  | `false`       |
+
+### HTTP/1.1 vs HTTP/2 slow body
+
+| Protocol | Flag | Framing | Typical target URL |
+|:---------|:-----|:--------|:-------------------|
+| HTTP/1.1 | `--protocol http1` | `Transfer-Encoding: chunked`, 1-byte chunks | `http://…` or `https://…` |
+| HTTP/2   | `--protocol http2` | `Content-Length` + slow DATA frames over TLS | `https://…` |
+| h2c      | `--protocol h2c`   | Same as HTTP/2, cleartext (no TLS) | `http://…` |
+
+Examples (defensive testing / WAF lab):
+
+```bash
+# Classic RUDY (HTTP/1.1 chunked)
+rudy run -u http://127.0.0.1:8081 -c 50 -i 10s -p 1MB --protocol http1
+
+# Slow POST over HTTP/2 TLS (self-signed OK with -k)
+rudy run -u https://127.0.0.1:443 -c 50 -i 10s -p 1MB --protocol http2 -k
+
+# Slow POST over cleartext HTTP/2 (h2c)
+rudy run -u http://127.0.0.1:80 -c 50 -i 10s -p 1MB --protocol h2c
+```
+
+Each concurrent worker uses its own client/transport so HTTP/2 sessions open separate connections (comparable to multi-connection HTTP/1 RUDY).
 
 ## Configuration file
 You can define a `.rudy.yml` file to statically define options then override it using CLI flags.
@@ -65,6 +90,8 @@ headers:
   - ContentType:application/json
   - Accept:text/html
 url: http://domain.com
+protocol: http1   # http1 | http2 | h2c
+insecure: false
 ```
 
 ### Run the testing server

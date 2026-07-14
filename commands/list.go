@@ -78,6 +78,8 @@ func Prepare(root *cobra.Command) {
 			setVar(flags, "method", &method, mfl.Method)
 			setVar(flags, "headers", &headers, mfl.Headers)
 			setVar(flags, "url", &url, mfl.URL)
+			setVar(flags, "protocol", &protocol, mfl.Protocol)
+			setVar(flags, "insecure", &insecure, mfl.Insecure)
 		}
 
 		for _, f := range instance.GetRequiredFlags() {

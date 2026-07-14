@@ -17,6 +17,7 @@ linters:
             - github.com/spf13/cobra
             - github.com/spf13/pflag
             - go.uber.org/zap
+            - golang.org/x/net
             - gopkg.in/yaml.v3
 issues:
   fix: true

@@ -19,6 +19,8 @@ type FileLoader struct {
 	Method      *string        `yaml:"method"`
 	Headers     *[]string      `yaml:"headers"`
 	URL         *string        `yaml:"url"`
+	Protocol    *string        `yaml:"protocol"`
+	Insecure    *bool          `yaml:"insecure"`
 }
 
 // NewFileLoader loads the configuration from the file.
