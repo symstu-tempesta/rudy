@@ -117,7 +117,8 @@ func (*Run) Run() RunCmd {
 					Tor:      tor,
 				})
 
-				if err := req.Send(); err == nil {
+				err := req.Send()
+				if err == nil {
 					logger.Logger.Sugar().Infof("Request successfully sent to %s", url)
 				}
 			}()

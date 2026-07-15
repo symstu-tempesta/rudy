@@ -187,7 +187,8 @@ func (r *request) Send() error {
 					return
 				}
 
-				if _, werr := pipeWriter.Write(buf[:n]); werr != nil {
+				_, werr := pipeWriter.Write(buf[:n])
+				if werr != nil {
 					return
 				}
 
